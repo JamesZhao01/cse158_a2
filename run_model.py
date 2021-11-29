@@ -108,30 +108,36 @@ def main():
     positives = set()
 
 
-    # for idx, b in tqdm.tqdm(meta.iterrows()):
-    #     a1= b["asin"]
-    #     related = b["related"]
-    #     if related is not None and 'also_bought' in related:
-    #         for a2 in related['also_bought']:
-    #             if a2 in all_items:
-    #                 positives.add((a1,a2,1))
-    #     if related is not None and 'bought_together' in related:
-    #         for a2 in related['bought_together']:
-    #             if a2 in all_items:
-    #                 positives.add((a1,a2,1))
+    for idx, b in tqdm.tqdm(meta.iterrows()):
+        a1= b["asin"]
+        related = b["related"]
+        if related is not None and 'also_bought' in related:
+            for a2 in related['also_bought']:
+                if a2 in all_items:
+                    if a1 < a2:
+                        positives.add((a1,a2))
+                    else:
+                        positives.add((a2,a1))
+        if related is not None and 'bought_together' in related:
+            for a2 in related['bought_together']:
+                if a2 in all_items:
+                    if a1 < a2:
+                        positives.add((a1,a2))
+                    if a2 < a1:
+                        positives.add((a2,a1))
 
     rPU = defaultdict(list)
-    for idx, b in tqdm.tqdm(rev.iterrows()):
-        asin, user = b["asin"], b["reviewerID"]
-        if asin in all_items:
-            rPU[user].append(asin)
-    for ratList in rPU.values():
-        ratList.sort()
-    print(len(rPU))
-    for user, rats in tqdm.tqdm(rPU.items()):
-        for i in range(len(rats)):
-            for j in range(i + 1, len(rats)):
-                positives.add((rats[i], rats[j]))
+    # for idx, b in tqdm.tqdm(rev.iterrows()):
+    #     asin, user = b["asin"], b["reviewerID"]
+    #     if asin in all_items:
+    #         rPU[user].append(asin)
+    # for ratList in rPU.values():
+    #     ratList.sort()
+    # print(len(rPU))
+    # for user, rats in tqdm.tqdm(rPU.items()):
+    #     for i in range(len(rats)):
+    #         for j in range(i + 1, len(rats)):
+    #             positives.add((rats[i], rats[j]))
 
     positives_li = list(positives)
     print(len(positives_li))
@@ -147,9 +153,9 @@ def main():
     
     print("Num positives", len(positives), "Maximum possible (using combinatorics)", sum([len(t) * (len(t) - 1) / 2 for t in rPU.values() if len(t) > 1]))
     print(f"X_tr: {len(X_tr)}, X_va: {len(X_va)}, X_te: {len(X_te)}")
-    model = Mahalanobis(X_tr, X_va, positives, all_items, asin_to_idx, path = "./data/shoes")
-    checkpoint_callback = ModelCheckpoint(monitor="val/acc_step")
-    trainer = pl.Trainer(max_epochs=10, gpus=1, reload_dataloaders_every_epoch=True, progress_bar_refresh_rate=50, logger=True, default_root_dir="./models", callbacks=[checkpoint_callback])
+    model = Mahalanobis(X_tr, X_va, positives, all_items, asin_to_idx, path = "./data/shoes", K=1)
+    checkpoint_callback = ModelCheckpoint(monitor="val/acc_epoch")
+    trainer = pl.Trainer(max_epochs=15, gpus=1, reload_dataloaders_every_epoch=True, progress_bar_refresh_rate=50, logger=True, default_root_dir="./models", callbacks=[checkpoint_callback])
     trainer.fit(model)
 
 
